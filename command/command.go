@@ -1,8 +1,8 @@
-package main
+package command
 
 import (
 	"bytes"
-	"fmt"
+	//"fmt"
 	"log"
 	"os/exec"
 	"regexp"
@@ -15,17 +15,18 @@ var regexpStr map[string]string = map[string]string{
 	"svnUp":       "[Updated to|At] revision ([\\d]{1,10})",
 }
 
-func main() {
-	//  re1 := svnCheckout("https://svn.td.gamebar.com/svn/private/liwai/test", "/root/goproject/svntest")
-	//	re1 := svnUp("/root/goproject/svntest/test")
-	//	fmt.Println(re1)
-	//	re2 := svnUpToRevision("/root/goproject/svntest/test", 502)
-	//	fmt.Println(re2)
-	//	re3 := specifiedCommand("wc -l /root/goproject/svntest/test/1.txt", "")
-	//	fmt.Println(re3)
-	//specifiedCommand("wc -l /root/goproject/svntest/test/1.txt", "")
-	specifiedCommand("echo $path", "")
-}
+//func main() {
+//	//  re1 := svnCheckout("https://svn.td.gamebar.com/svn/private/liwai/test", "/root/goproject/svntest")
+//	//	re1 := svnUp("/root/goproject/svntest/test")
+//	//	fmt.Println(re1)
+//	//	re2 := svnUpToRevision("/root/goproject/svntest/test", 502)
+//	//	fmt.Println(re2)
+//	//	re3 := specifiedCommand("wc -l /root/goproject/svntest/test/1.txt", "")
+//	//	fmt.Println(re3)
+//	//re4 := specifiedCommand("ps aux", "")
+//	re4 := complexCommand("ps aux |grep apache", "")
+//	fmt.Println(re4)
+//}
 
 /**
 svn up
@@ -114,8 +115,8 @@ func svnUpToRevision(dir string, revision int) int {
 	return praseCommandOut(out.String(), regexpStr["svnUp"])
 }
 
-//执行指定命令
-func specifiedCommand(command string, dir string) {
+//执行指定命令，简单命令，不包含管道操作、&&等
+func specifiedCommand(command string, dir string) string {
 	if dir == "" {
 		dir = "/root/"
 	}
@@ -128,14 +129,16 @@ func specifiedCommand(command string, dir string) {
 	if len(parts) == 1 {
 		cmd = exec.Command(command)
 	} else {
+		commandFile := parts[0]
 		parts = parts[1:len(parts)]
-		//commandSlice := []string{"-c", command}
-		//1 i,v in commandSlice
-		//commandSlice = append(commandSlice, parts[1:len(parts)])
-		//cmd = exec.Command("/bin/bash", "-c", command, parts...)
-		cmd = exec.Command("/usr/bin/wc ", "-l", "/root/goproject/svntest/test/1.txt")
+		commandSlice := []string{}
+		for _, param := range parts {
+			commandSlice = append(commandSlice, param)
+		}
+		cmd = exec.Command(commandFile, commandSlice...)
+		///usr/bin/wc -l /root/goproject/svntest/test/1.txt
+		//cmd = exec.Command("/usr/bin/wc", "-l", "/root/goproject/svntest/test/1.txt")
 	}
-	fmt.Println(exec.LookPath("wc"))
 	cmd.Dir = dir
 	env := "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/go/bin:/root/bin"
 	cmd.Env = strings.Split(env, ":")
@@ -143,5 +146,33 @@ func specifiedCommand(command string, dir string) {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	checkErr(err)
-	fmt.Println(out.String())
+	//fmt.Println(out.String())
+	return out.String()
+}
+
+//复杂命令 管道操作等
+func complexCommand(command string, dir string) string {
+	if dir == "" {
+		dir = "/root/"
+	}
+	command = strings.TrimSpace(command)
+	if command == "" {
+		log.Fatal("lost command")
+	}
+	parts := strings.Fields(command)
+	var cmd *exec.Cmd
+	if len(parts) == 1 {
+		cmd = exec.Command(command)
+	} else {
+		cmd = exec.Command("/bin/bash", "-c", command)
+	}
+	cmd.Dir = dir
+	env := "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/go/bin:/root/bin"
+	cmd.Env = strings.Split(env, ":")
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	err := cmd.Run()
+	checkErr(err)
+	//fmt.Println(out.String())
+	return out.String()
 }

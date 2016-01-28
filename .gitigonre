@@ -1,0 +1,4 @@
+*.exe
+spacecraft_server
+spacecraft_client
+command

@@ -36,21 +36,43 @@ syntax = "proto3";
 
 package spacecraft;
 
-// The greeting service definition.
-service base {
-  rpc testfunc1 (testfunc1Params) returns (testfunc1Result) {}
+service Spacecraft{
+	rpc svnUp(SvnUpParam) returns (VersionNum){}
+	rpc svnCheckout(SvnCheckoutParams) returns (VersionNum){}
+	rpc svnUpToRevision(SvnUpToRevisionParams) returns (VersionNum){}
+	rpc svnInfo(SvnUpParam)  returns (ResponseStr){}
+	rpc specifiedCommand(SpecifiedCommandParams) returns (ResponseStr){}
+	rpc complexCommand(SpecifiedCommandParams) returns (ResponseStr){}
 }
 
-// The request message containing the user's name.
-message testfunc1Params {
-  string id = 1;
-  string name = 2;
-  string pass = 3;
+//svnUp params
+message SvnUpParam {
+	string dir =1;
 }
 
-// The response message
-message testfunc1Result {
-  string r_id = 1;
-  string r_name = 2;
-  string r_pass = 3;
+//svnUp response
+message VersionNum{
+	int32 version =1;
+}
+
+//svnCheckout params
+message SvnCheckoutParams {
+	string svnUrl =1;
+	string dir =2;
+}
+
+//svnUpToRevision params
+message SvnUpToRevisionParams {
+	string dir = 1;
+	int32 version = 2;
+}
+
+message ResponseStr{
+	string string =1;
+}
+
+//specifiedCommand params
+message SpecifiedCommandParams {
+	string command =1;
+	string dir =2;
 }
