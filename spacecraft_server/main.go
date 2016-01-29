@@ -4,7 +4,8 @@ import (
 	"log"
 	"net"
 
-	"../command"
+	"../deploy/command"
+	"../deploy/upload"
 	sc "../spacecraft"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
@@ -21,8 +22,8 @@ func (s *server) SvnUp(context.Context, *sc.SvnUpParam) (*sc.VersionNum, error) 
 	return &sc.VersionNum{Version: 123}, nil
 }
 func (s *server) SvnCheckout(ctx context.Context, in *sc.SvnCheckoutParams) (*sc.VersionNum, error) {
-	version := command.svnCheckout(in.SvnUrl, in.Dir)
-	return &sc.VersionNum{Version: version}, nil
+	version := command.SvnCheckout(in.SvnUrl, in.Dir)
+	return &sc.VersionNum{Version: int32(version)}, nil
 }
 func (s *server) SvnUpToRevision(context.Context, *sc.SvnUpToRevisionParams) (*sc.VersionNum, error) {
 	return &sc.VersionNum{Version: 123}, nil
@@ -34,6 +35,10 @@ func (s *server) SpecifiedCommand(context.Context, *sc.SpecifiedCommandParams) (
 	return &sc.ResponseStr{String_: "okkkkkkkkkkk"}, nil
 }
 func (s *server) ComplexCommand(context.Context, *sc.SpecifiedCommandParams) (*sc.ResponseStr, error) {
+	return &sc.ResponseStr{String_: "okkkkkkkkkkk"}, nil
+}
+func (s *server) SendFile(ctx context.Context, in *sc.SendFileParams) (*sc.ResponseStr, error) {
+	upload.Upload(in.FileAbsolutePath, in.FileContent, in.StoragePath)
 	return &sc.ResponseStr{String_: "okkkkkkkkkkk"}, nil
 }
 

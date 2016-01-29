@@ -45,7 +45,7 @@ A    2.txt
 Updated to revision 503.
 
 */
-func svnUp(dir string) int {
+func SvnUp(dir string) int {
 	cmd := exec.Command("svn", "up")
 	cmd.Dir = dir
 
@@ -58,7 +58,7 @@ func svnUp(dir string) int {
 }
 
 //svn checkout版本到指定的目录
-func svnCheckout(svnUrl string, dir string) int {
+func SvnCheckout(svnUrl string, dir string) int {
 	cmd := exec.Command("svn", "checkout", svnUrl)
 	cmd.Dir = dir
 
@@ -90,7 +90,7 @@ func checkErr(err error) {
 }
 
 //获得svn info信息
-func svnInfo(dir string) string {
+func SvnInfo(dir string) string {
 	cmd := exec.Command("svn", "info")
 	cmd.Dir = dir
 
@@ -103,7 +103,7 @@ func svnInfo(dir string) string {
 
 //svn 升级到指定版本
 //http://www.cnblogs.com/mfryf/p/4654110.html
-func svnUpToRevision(dir string, revision int) int {
+func SvnUpToRevision(dir string, revision int) int {
 	cmd := exec.Command("svn", "up", "-r", strconv.Itoa(revision))
 	cmd.Dir = dir
 
@@ -116,7 +116,7 @@ func svnUpToRevision(dir string, revision int) int {
 }
 
 //执行指定命令，简单命令，不包含管道操作、&&等
-func specifiedCommand(command string, dir string) string {
+func SpecifiedCommand(command string, dir string) string {
 	if dir == "" {
 		dir = "/root/"
 	}
@@ -151,7 +151,7 @@ func specifiedCommand(command string, dir string) string {
 }
 
 //复杂命令 管道操作等
-func complexCommand(command string, dir string) string {
+func ComplexCommand(command string, dir string) string {
 	if dir == "" {
 		dir = "/root/"
 	}

@@ -43,22 +43,23 @@ service Spacecraft{
 	rpc svnInfo(SvnUpParam)  returns (ResponseStr){}
 	rpc specifiedCommand(SpecifiedCommandParams) returns (ResponseStr){}
 	rpc complexCommand(SpecifiedCommandParams) returns (ResponseStr){}
+	rpc sendFile(sendFileParams) returns (ResponseStr){}
 }
 
 //svnUp params
 message SvnUpParam {
-	string dir =1;
+	string dir = 1;
 }
 
 //svnUp response
 message VersionNum{
-	int32 version =1;
+	int32 version = 1;
 }
 
 //svnCheckout params
 message SvnCheckoutParams {
-	string svnUrl =1;
-	string dir =2;
+	string svnUrl = 1;
+	string dir = 2;
 }
 
 //svnUpToRevision params
@@ -68,11 +69,18 @@ message SvnUpToRevisionParams {
 }
 
 message ResponseStr{
-	string string =1;
+	string string = 1;
 }
 
 //specifiedCommand params
 message SpecifiedCommandParams {
-	string command =1;
-	string dir =2;
+	string command = 1;
+	string dir = 2;
+}
+
+//sendFile params
+message sendFileParams{
+	string fileAbsolutePath = 1;
+	bytes fileContent = 2;
+	string storagePath = 3;
 }
