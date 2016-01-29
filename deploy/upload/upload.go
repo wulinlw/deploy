@@ -1,7 +1,7 @@
 package upload
 
 import (
-	"fmt"
+	//"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -16,7 +16,7 @@ func Upload(fileAbsolutePath string, fileContent []byte, storagePath string) {
 	checkErr(mkdirErr)
 	storagePath = filepath.ToSlash(filepath.Dir(storagePath)) + "/"
 	newFile := storagePath + fileName
-	fmt.Println(newFile, len(fileContent))
+	//fmt.Println(newFile, len(fileContent))
 	fileErr := ioutil.WriteFile(newFile, fileContent, 0777)
 	checkErr(fileErr)
 }
