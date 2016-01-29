@@ -1,6 +1,8 @@
 *.exe
 /spacecraft_server/spacecraft_server
+/spacecraft_server/spacecraft_server.exe
 /spacecraft_client/spacecraft_client
+/spacecraft_client/spacecraft_client.exe
 /command/command
 /deploy/shell.go.bak
 /test

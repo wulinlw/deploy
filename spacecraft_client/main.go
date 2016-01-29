@@ -29,7 +29,7 @@ func main() {
 	r, err := c.SendFile(context.Background(), &sc.SendFileParams{
 		FileAbsolutePath: file,
 		FileContent:      fileContent,
-		StoragePath:      "/root/goproject/svntest/xxx/"})
+		StoragePath:      "/root/goproject/svntest/xxx"})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
