@@ -34,8 +34,9 @@ func (s *server) SvnInfo(context.Context, *sc.SvnUpParam) (*sc.ResponseStr, erro
 func (s *server) SpecifiedCommand(context.Context, *sc.SpecifiedCommandParams) (*sc.ResponseStr, error) {
 	return &sc.ResponseStr{String_: "okkkkkkkkkkk"}, nil
 }
-func (s *server) ComplexCommand(context.Context, *sc.SpecifiedCommandParams) (*sc.ResponseStr, error) {
-	return &sc.ResponseStr{String_: "okkkkkkkkkkk"}, nil
+func (s *server) ComplexCommand(ctx context.Context, in *sc.SpecifiedCommandParams) (*sc.ResponseStr, error) {
+	result := command.ComplexCommand(in.Command, in.Dir)
+	return &sc.ResponseStr{String_: result}, nil
 }
 func (s *server) SendFile(ctx context.Context, in *sc.SendFileParams) (*sc.ResponseStr, error) {
 	upload.Upload(in.FileAbsolutePath, in.FileContent, in.StoragePath)
