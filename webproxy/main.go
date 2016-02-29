@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	address = "192.168.9.97:50051"
+	address = "localhost:50051"
 )
 
 //form:gsid
@@ -37,6 +37,13 @@ func index(w http.ResponseWriter, req *http.Request) {
 			//			run(param)
 			result = run(param)
 			fmt.Println(result)
+		} else if funcName == "SendFile" {
+			param := &sc.SendFileParams{
+				FileAbsolutePath: req.FormValue("FileAbsolutePath"),
+				FileContent:      []byte(req.FormValue("FileContent")),
+				StoragePath:      req.FormValue("StoragePath")}
+			result = sendfile(param)
+			fmt.Println(result)
 		}
 
 		w.Write([]byte(result))
@@ -57,6 +64,23 @@ func run(param interface{}) string {
 	defer conn.Close()
 	c := sc.NewSpacecraftClient(conn)
 	r, err := c.ComplexCommand(context.Background(), param.(*sc.SpecifiedCommandParams))
+	if err != nil {
+		log.Fatalf("could not greet: %v", err)
+	}
+	//	log.Printf("%#v", r)
+	//	log.Println(r)
+	return string(r.String_)
+}
+
+func sendfile(param interface{}) string {
+	// Set up a connection to the server.
+	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	c := sc.NewSpacecraftClient(conn)
+	r, err := c.SendFile(context.Background(), param.(*sc.SendFileParams))
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
