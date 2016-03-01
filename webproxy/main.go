@@ -35,14 +35,14 @@ func index(w http.ResponseWriter, req *http.Request) {
 				Dir:     req.FormValue("dir")}
 			//fmt.Println(param)
 			//			run(param)
-			result = run(param)
+			result = run(param, req.FormValue("ip"))
 			fmt.Println(result)
 		} else if funcName == "SendFile" {
 			param := &sc.SendFileParams{
 				FileAbsolutePath: req.FormValue("FileAbsolutePath"),
 				FileContent:      []byte(req.FormValue("FileContent")),
 				StoragePath:      req.FormValue("StoragePath")}
-			result = sendfile(param)
+			result = sendfile(param, req.FormValue("ip"))
 			fmt.Println(result)
 		}
 
@@ -55,9 +55,9 @@ func main() {
 	http.ListenAndServe(":8000", nil)
 }
 
-func run(param interface{}) string {
+func run(param interface{}, ip string) string {
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	conn, err := grpc.Dial(ip, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
@@ -72,9 +72,9 @@ func run(param interface{}) string {
 	return string(r.String_)
 }
 
-func sendfile(param interface{}) string {
+func sendfile(param interface{}, ip string) string {
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(address, grpc.WithInsecure())
+	conn, err := grpc.Dial(ip, grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
