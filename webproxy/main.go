@@ -1,6 +1,7 @@
 package main
 
 import (
+	"time"
 	//"encoding/json"
 	"fmt"
 	"net/http"
@@ -57,7 +58,7 @@ func main() {
 
 func run(param interface{}, ip string) string {
 	// Set up a connection to the server.
-	conn, err := grpc.Dial(ip, grpc.WithInsecure())
+	conn, err := grpc.Dial(ip, grpc.WithInsecure(), grpc.WithTimeout(time.Second*30))
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
