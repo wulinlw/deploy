@@ -1,4 +1,6 @@
-
 spacecraft_client/spacecraft_client
-
+spacecraft_client/spacecraft_client.exe
 spacecraft_server/spacecraft_server
+spacecraft_server/spacecraft_server.exe
+webproxy/webproxy
+webproxy/webproxy.exe

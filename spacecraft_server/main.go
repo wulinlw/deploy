@@ -42,6 +42,10 @@ func (s *server) SendFile(ctx context.Context, in *sc.SendFileParams) (*sc.Respo
 	upload.Upload(in.FileAbsolutePath, in.FileContent, in.StoragePath)
 	return &sc.ResponseStr{String_: "okkkkkkkkkkk"}, nil
 }
+func (s *server) GetFileList(ctx context.Context, in *sc.SvnUpParam) (*sc.ResponseStr, error) {
+	result := upload.GetFileList(in.Dir)
+	return &sc.ResponseStr{String_: result}, nil
+}
 
 func main() {
 	lis, err := net.Listen("tcp", port)

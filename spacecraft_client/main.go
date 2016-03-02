@@ -6,11 +6,11 @@ import (
 	sc "../spacecraft"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
-	"io/ioutil"
+	//"io/ioutil"
 )
 
 const (
-	address = "192.168.9.97:50051"
+	address = "127.0.0.1:50051"
 )
 
 func main() {
@@ -23,13 +23,16 @@ func main() {
 	c := sc.NewSpacecraftClient(conn)
 
 	//r, err := c.SvnCheckout(context.Background(), &sc.SvnCheckoutParams{SvnUrl: "https://svn.td.gamebar.com/svn/private/liwai/test", Dir: "/root/goproject/svntest"})
-	file := "E:/soft_package/17monipdb.exe"
-	fileContent, err := ioutil.ReadFile(file)
-	checkErr(err)
-	r, err := c.SendFile(context.Background(), &sc.SendFileParams{
-		FileAbsolutePath: file,
-		FileContent:      fileContent,
-		StoragePath:      "/root/goproject/svntest/xxx"})
+
+	//file := "E:/soft_package/17monipdb.exe"
+	//fileContent, err := ioutil.ReadFile(file)
+	//checkErr(err)
+	//r, err := c.SendFile(context.Background(), &sc.SendFileParams{
+	//	FileAbsolutePath: file,
+	//	FileContent:      fileContent,
+	//	StoragePath:      "/root/goproject/svntest/xxx"})
+
+	r, err := c.GetFileList(context.Background(), &sc.SvnUpParam{Dir: "C:\\go_test\\deploy"})
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
