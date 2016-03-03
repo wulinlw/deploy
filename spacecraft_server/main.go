@@ -40,7 +40,7 @@ func (s *server) ComplexCommand(ctx context.Context, in *sc.SpecifiedCommandPara
 }
 func (s *server) SendFile(ctx context.Context, in *sc.SendFileParams) (*sc.ResponseStr, error) {
 	upload.Upload(in.FileAbsolutePath, in.FileContent, in.StoragePath)
-	return &sc.ResponseStr{String_: "okkkkkkkkkkk"}, nil
+	return &sc.ResponseStr{String_: "ok"}, nil
 }
 func (s *server) GetFileList(ctx context.Context, in *sc.SvnUpParam) (*sc.ResponseStr, error) {
 	result := upload.GetFileList(in.Dir)

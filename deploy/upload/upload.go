@@ -37,12 +37,12 @@ func Upload(fileAbsolutePath string, fileContent []byte, storagePath string) {
 
 func GetFileList(path string) string {
 	//var folder = filepath.ToSlash("C:\\go_test\\deploy")
-	var folder = filepath.ToSlash(path)
+	var folder = filepath.ToSlash(path) + string(os.PathSeparator)
 	var fileList []string
 	readFolders(folder, &fileList)
 	//fmt.Println(fileList)
 	for i, fullPath := range fileList {
-		fileList[i] = strings.Replace(fullPath, folder, "", -1)
+		fileList[i] = strings.Replace(fullPath, folder+string(os.PathSeparator), "", -1)
 	}
 	//fmt.Println(fileList)
 	b, _ := json.Marshal(fileList)

@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	address = "localhost:50051"
+	//address = "localhost:50051"
+	address = "192.168.9.97:50051"
 )
 
 //form:gsid
@@ -43,6 +44,11 @@ func index(w http.ResponseWriter, req *http.Request) {
 				FileContent:      []byte(req.FormValue("FileContent")),
 				StoragePath:      req.FormValue("StoragePath")}
 			result = sendfile(param, req.FormValue("ip"))
+			fmt.Println(result)
+		} else if funcName == "GetFileList" {
+			param := &sc.SvnUpParam{
+				Dir: req.FormValue("dir")}
+			result = getFileList(param, req.FormValue("ip"))
 			fmt.Println(result)
 		}
 
@@ -81,6 +87,23 @@ func sendfile(param interface{}, ip string) string {
 	defer conn.Close()
 	c := sc.NewSpacecraftClient(conn)
 	r, err := c.SendFile(context.Background(), param.(*sc.SendFileParams))
+	if err != nil {
+		log.Fatalf("could not greet: %v", err)
+	}
+	//	log.Printf("%#v", r)
+	//	log.Println(r)
+	return string(r.String_)
+}
+
+func getFileList(param interface{}, ip string) string {
+	// Set up a connection to the server.
+	conn, err := grpc.Dial(ip, grpc.WithInsecure())
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer conn.Close()
+	c := sc.NewSpacecraftClient(conn)
+	r, err := c.GetFileList(context.Background(), param.(*sc.SvnUpParam))
 	if err != nil {
 		log.Fatalf("could not greet: %v", err)
 	}
