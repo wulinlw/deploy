@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -11,11 +10,7 @@ import (
 	"google.golang.org/grpc"
 	//"io/ioutil"
 	"log"
-)
-
-const (
-	//address = "localhost:50051"
-	address = "192.168.9.97:50051"
+	"time"
 )
 
 //form:gsid
@@ -50,6 +45,10 @@ func index(w http.ResponseWriter, req *http.Request) {
 				Dir: req.FormValue("dir")}
 			result = getFileList(param, req.FormValue("ip"))
 			fmt.Println(result)
+		} else if funcName == "Live" {
+			param := &sc.Empty{}
+			result = live(param, req.FormValue("ip"))
+			fmt.Println(result)
 		}
 
 		w.Write([]byte(result))
@@ -62,58 +61,82 @@ func main() {
 }
 
 func run(param interface{}, ip string) string {
-	// Set up a connection to the server.
-	conn, err := grpc.Dial(ip, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+	conn, c, err := createConnect(ip)
+	if conn != nil { //连接失败时为nil，不能close
+		defer conn.Close()
 	}
-	defer conn.Close()
-	c := sc.NewSpacecraftClient(conn)
+	if err != nil {
+		log.Printf("connect failed: %v", err)
+		return "connect failed:" + ip
+	}
 	r, err := c.ComplexCommand(context.Background(), param.(*sc.SpecifiedCommandParams))
 	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+		log.Printf("call rpc failed: %v", err)
 	}
 	//	log.Printf("%#v", r)
-	//	log.Println(r)
 	return string(r.String_)
 }
 
-func sendfile(param interface{}, ip string) string {
-	// Set up a connection to the server.
-	conn, err := grpc.Dial(ip, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
-	}
-	defer conn.Close()
+func createConnect(ip string) (*grpc.ClientConn, sc.SpacecraftClient, error) {
+	conn, err := grpc.Dial(ip, grpc.WithInsecure(), grpc.WithTimeout(time.Second*5), grpc.WithBlock())
+	//defer conn.Close()
 	c := sc.NewSpacecraftClient(conn)
+	return conn, c, err
+}
+
+func sendfile(param interface{}, ip string) string {
+	conn, c, err := createConnect(ip)
+	if conn != nil { //连接失败时为nil，不能close
+		defer conn.Close()
+	}
+	if err != nil {
+		log.Printf("connect failed: %v", err)
+		return "connect failed:" + ip
+	}
 	r, err := c.SendFile(context.Background(), param.(*sc.SendFileParams))
 	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+		log.Printf("could not greet: %v", err)
 	}
 	//	log.Printf("%#v", r)
-	//	log.Println(r)
 	return string(r.String_)
 }
 
 func getFileList(param interface{}, ip string) string {
-	// Set up a connection to the server.
-	conn, err := grpc.Dial(ip, grpc.WithInsecure())
-	if err != nil {
-		log.Fatalf("did not connect: %v", err)
+	conn, c, err := createConnect(ip)
+	if conn != nil { //连接失败时为nil，不能close
+		defer conn.Close()
 	}
-	defer conn.Close()
-	c := sc.NewSpacecraftClient(conn)
+	if err != nil {
+		log.Printf("connect failed: %v", err)
+		return "connect failed:" + ip
+	}
 	r, err := c.GetFileList(context.Background(), param.(*sc.SvnUpParam))
 	if err != nil {
-		log.Fatalf("could not greet: %v", err)
+		log.Printf("could not greet: %v", err)
 	}
 	//	log.Printf("%#v", r)
-	//	log.Println(r)
+	return string(r.String_)
+}
+
+func live(param interface{}, ip string) string {
+	conn, c, err := createConnect(ip)
+	if conn != nil { //连接失败时为nil，不能close
+		defer conn.Close()
+	}
+	if err != nil {
+		log.Printf("connect failed: %v", err)
+		return "connect failed:" + ip
+	}
+	r, err := c.Live(context.Background(), param.(*sc.Empty))
+	if err != nil {
+		log.Printf("could not greet: %v", err)
+	}
+	//	log.Printf("%#v", r)
 	return string(r.String_)
 }
 
 func checkErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }

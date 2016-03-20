@@ -66,7 +66,7 @@ func SvnCheckout(svnUrl string, dir string) int {
 	cmd.Stdout = &out
 	err := cmd.Run()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 	return praseCommandOut(out.String(), regexpStr["svnCheckout"])
 }
@@ -85,7 +85,7 @@ func praseCommandOut(str string, regexpString string) int {
 
 func checkErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }
 
@@ -122,7 +122,7 @@ func SpecifiedCommand(command string, dir string) string {
 	}
 	command = strings.TrimSpace(command)
 	if command == "" {
-		log.Fatal("lost command")
+		log.Println("lost command")
 	}
 	parts := strings.Fields(command)
 	var cmd *exec.Cmd
@@ -157,7 +157,7 @@ func ComplexCommand(command string, dir string) string {
 	}
 	command = strings.TrimSpace(command)
 	if command == "" {
-		log.Fatal("lost command")
+		log.Println("lost command")
 	}
 	parts := strings.Fields(command)
 	var cmd *exec.Cmd

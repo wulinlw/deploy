@@ -74,6 +74,6 @@ func readFolders(path string, fileList *[]string) {
 
 func checkErr(err error) {
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 }

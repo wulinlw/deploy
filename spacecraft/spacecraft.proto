@@ -45,6 +45,11 @@ service Spacecraft{
 	rpc complexCommand(SpecifiedCommandParams) returns (ResponseStr){}
 	rpc sendFile(sendFileParams) returns (ResponseStr){}
 	rpc getFileList(SvnUpParam) returns (ResponseStr){}
+	rpc live(Empty) returns (ResponseStr){}
+}
+//live
+message Empty {
+	
 }
 
 //svnUp params

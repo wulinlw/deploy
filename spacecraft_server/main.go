@@ -46,6 +46,9 @@ func (s *server) GetFileList(ctx context.Context, in *sc.SvnUpParam) (*sc.Respon
 	result := upload.GetFileList(in.Dir)
 	return &sc.ResponseStr{String_: result}, nil
 }
+func (s *server) Live(ctx context.Context, in *sc.Empty) (*sc.ResponseStr, error) {
+	return &sc.ResponseStr{String_: "ok"}, nil
+}
 
 func main() {
 	lis, err := net.Listen("tcp", port)
