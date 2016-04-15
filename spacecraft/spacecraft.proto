@@ -86,7 +86,6 @@ message SpecifiedCommandParams {
 
 //sendFile params
 message sendFileParams{
-	string fileAbsolutePath = 1;
+	string relativePath = 1;
 	bytes fileContent = 2;
-	string storagePath = 3;
 }

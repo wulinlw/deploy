@@ -5,17 +5,12 @@ import (
 
 	sc "../spacecraft"
 
+	"errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
-	"reflect"
-
-	//	"io/ioutil"
-
-	//	"path/filepath"
-	"errors"
 	"net/http"
-
+	"reflect"
 	"strconv"
 	"time"
 )
@@ -24,6 +19,7 @@ func main() {
 	http.HandleFunc("/index", index)
 	http.ListenAndServe(":8000", nil)
 }
+
 func index(w http.ResponseWriter, req *http.Request) {
 	ip := req.FormValue("ip")
 	conn, _, err := createConnect(ip)
@@ -33,20 +29,23 @@ func index(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Printf("connect failed: %v", err)
 		log.Printf("connect failed:" + ip)
+		return
 	}
 
 	clientObj := sc.NewSpacecraftClient(conn)
-	//ct := reflect.TypeOf(clientObj)
 	cc := reflect.ValueOf(clientObj)
 
 	apiList := getApis(clientObj)
-	fmt.Println(apiList)
-	fmt.Println("=============")
+	apiExist := checkApiExist(apiList, req.FormValue("apiName"))
+	if !apiExist {
+		fmt.Println("undefined apiName:" + req.FormValue("apiName"))
+		return
+	}
 	tt := cc.MethodByName(req.FormValue("apiName"))
-	fmt.Println(tt.IsValid())
 	paramsStruct := getStruct(req.FormValue("apiName"))
-	fmt.Sprintf("%#v", paramsStruct)
 	paramsStruct = fillStruct(paramsStruct, req)
+	fmt.Printf("\n======\n%s\n", req.FormValue("apiName"))
+	fmt.Printf("%#v", paramsStruct)
 	params := []interface{}{context.Background(), paramsStruct}
 	if tt.IsValid() {
 		args := make([]reflect.Value, len(params))
@@ -55,9 +54,10 @@ func index(w http.ResponseWriter, req *http.Request) {
 		}
 		// 调用
 		ret := tt.Call(args)
-		fmt.Println(ret, ret[0].Kind(), ret[0].String(), ret[0].Elem().FieldByName("String_").String())
+		//fmt.Println(ret, ret[0].Kind(), ret[0].String(), ret[0].Elem().FieldByName("String_").String())
+		//fmt.Printf("%#v", ret[0].Elem().FieldByName("String_").String())
 		if ret[0].Kind() == reflect.String {
-			fmt.Printf("%s Called result: %s\n", "方法名", ret[0].String())
+			fmt.Printf("%s ret[0].Elem().FieldByName(\"String_\") called result: %s\n", "方法名", ret[0].String())
 		}
 		w.Write([]byte(ret[0].Elem().FieldByName("String_").String()))
 	} else {
@@ -80,6 +80,15 @@ func getApis(object sc.SpacecraftClient) []string {
 		apiList = append(apiList, ct.Method(i).Name)
 	}
 	return apiList
+}
+
+func checkApiExist(apiList []string, apiName string) bool {
+	for _, v := range apiList {
+		if v == apiName {
+			return true
+		}
+	}
+	return false
 }
 
 func fillStruct(s interface{}, req *http.Request) interface{} {
@@ -107,6 +116,7 @@ func fillStruct(s interface{}, req *http.Request) interface{} {
 	fmt.Sprintf("%#v", s)
 	return s
 }
+
 func getStruct(apiName string) interface{} {
 	switch apiName {
 	case "ComplexCommand":
@@ -161,9 +171,10 @@ func TypeConversion(value string, ntype string) (reflect.Value, error) {
 	} else if ntype == "float64" {
 		i, err := strconv.ParseFloat(value, 64)
 		return reflect.ValueOf(i), err
+	} else if ntype == "slice" {
+		i := []byte(value)
+		return reflect.ValueOf(i), nil
 	}
-
 	//else if .......增加其他一些类型的转换
-
 	return reflect.ValueOf(value), errors.New("未知的类型：" + ntype)
 }
