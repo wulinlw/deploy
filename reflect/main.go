@@ -1,21 +1,31 @@
 package main
 
 import (
-	"fmt"
-
 	sc "../spacecraft"
-
 	"errors"
+	"fmt"
+	"github.com/garyburd/redigo/redis"
+	"github.com/gorilla/websocket"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  2048,
+	WriteBufferSize: 2048,
+	CheckOrigin:     func(r *http.Request) bool { return true },
+}
+var responseChan chan string
+
 func main() {
+	responseChan = make(chan string, 100)
+	http.HandleFunc("/ws", serveWs)
 	http.HandleFunc("/index", index)
 	http.ListenAndServe(":8000", nil)
 }
@@ -29,6 +39,15 @@ func index(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Printf("connect failed: %v", err)
 		log.Printf("connect failed:" + ip)
+		return
+	}
+	redisConn, err := createConnectRedis()
+	if redisConn != nil { //连接失败时为nil，不能close
+		defer redisConn.Close()
+	}
+	if err != nil {
+		log.Printf("connect redis failed: %v", err)
+		log.Printf("connect redis failed:" + ip)
 		return
 	}
 
@@ -59,7 +78,24 @@ func index(w http.ResponseWriter, req *http.Request) {
 		if ret[0].Kind() == reflect.String {
 			fmt.Printf("%s ret[0].Elem().FieldByName(\"String_\") called result: %s\n", "方法名", ret[0].String())
 		}
-		w.Write([]byte(ret[0].Elem().FieldByName("String_").String()))
+
+		response := ret[0].Elem().FieldByName("String_").String()
+		if req.FormValue("apiName") == "ComplexCommand" {
+
+			ipSlice := strings.Split(req.FormValue("ip"), ":")
+			ip := "gbops:" + ipSlice[0]
+			command := req.FormValue("Command")
+			fmt.Println(ip)
+			fmt.Println(command)
+			fmt.Println(response)
+			//s, err := redisConn.Do("hset", ip, command, strings.TrimSuffix(response, "\n")) //response中有换行，会失败
+			s, err := redisConn.Do("hset", ip, command, response)
+			fmt.Println(s, err)
+
+			responseChan <- response
+			//serveWs(w, req)
+		}
+		w.Write([]byte(response))
 	} else {
 		fmt.Println("can't call ")
 	}
@@ -72,6 +108,16 @@ func createConnect(ip string) (*grpc.ClientConn, sc.SpacecraftClient, error) {
 	c := sc.NewSpacecraftClient(conn)
 	return conn, c, err
 }
+
+func createConnectRedis() (redis.Conn, error) {
+	c, err := redis.Dial("tcp", "127.0.0.1:6379", redis.DialDatabase(0))
+	return c, err
+}
+
+//func createConnectWebsocket() (websocket.Conn, error) {
+//	conn, err := upgrader.Upgrade(w, r, nil)
+//	return conn, err
+//}
 
 func getApis(object sc.SpacecraftClient) []string {
 	var apiList = []string{}
@@ -177,4 +223,40 @@ func TypeConversion(value string, ntype string) (reflect.Value, error) {
 	}
 	//else if .......增加其他一些类型的转换
 	return reflect.ValueOf(value), errors.New("未知的类型：" + ntype)
+}
+
+func serveWs(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("upgrade:", err)
+		return
+	}
+	defer conn.Close()
+	for {
+		select {
+		case response := <-responseChan:
+			if err = conn.WriteMessage(websocket.TextMessage, []byte(response)); err != nil {
+				fmt.Println("输出命令执行日志失败，websocket写数据错误")
+				return
+			}
+			//		default:
+			//			//do nothing
+			//			messageType, p, err := conn.ReadMessage()
+			//			fmt.Println(messageType, p, err)
+			//			if err != nil {
+			//				return
+			//			}
+		}
+	}
+	//	for {
+	//		messageType, p, err := conn.ReadMessage()
+	//		fmt.Println(messageType, p)
+	//		if err != nil {
+	//			return
+	//		}
+	//		if err = conn.WriteMessage(messageType, p); err != nil {
+	//			fmt.Println("输出命令执行日志失败，websocket写数据错误")
+	//			return
+	//		}
+	//	}
 }
