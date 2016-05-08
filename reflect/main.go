@@ -235,9 +235,12 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case response := <-responseChan:
+			fmt.Println("ws将输出：", response)
 			if err = conn.WriteMessage(websocket.TextMessage, []byte(response)); err != nil {
-				fmt.Println("输出命令执行日志失败，websocket写数据错误")
+				fmt.Println("输出命令执行日志失败，websocket写数据错误", err)
 				return
+			} else {
+				fmt.Println("ws成功输出：", response)
 			}
 			//		default:
 			//			//do nothing
