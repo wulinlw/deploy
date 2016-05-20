@@ -4,8 +4,9 @@ import (
 	sc "../spacecraft"
 	"errors"
 	"fmt"
-	"github.com/garyburd/redigo/redis"
-	"github.com/gorilla/websocket"
+	//"github.com/garyburd/redigo/redis"
+	//	"github.com/gorilla/websocket"
+	"encoding/json"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"log"
@@ -16,17 +17,31 @@ import (
 	"time"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  2048,
-	WriteBufferSize: 2048,
-	CheckOrigin:     func(r *http.Request) bool { return true },
-}
+//var upgrader = websocket.Upgrader{
+//	ReadBufferSize:  2048,
+//	WriteBufferSize: 2048,
+//	CheckOrigin:     func(r *http.Request) bool { return true },
+//}
 var responseChan chan string
+
+type jsonresult struct {
+	UniqueId string `json:"uniqueId"`
+	Ip       string `json:"ip"`
+	Command  string `json:"command"`
+	Result   string `json:"result"`
+}
+type liveresult struct {
+	Ip     string
+	Mid    string
+	Result int
+}
 
 func main() {
 	responseChan = make(chan string, 100)
+	go h.run()
 	http.HandleFunc("/ws", serveWs)
 	http.HandleFunc("/index", index)
+	http.HandleFunc("/live", live)
 	http.ListenAndServe(":8000", nil)
 }
 
@@ -41,15 +56,15 @@ func index(w http.ResponseWriter, req *http.Request) {
 		log.Printf("connect failed:" + ip)
 		return
 	}
-	redisConn, err := createConnectRedis()
-	if redisConn != nil { //连接失败时为nil，不能close
-		defer redisConn.Close()
-	}
-	if err != nil {
-		log.Printf("connect redis failed: %v", err)
-		log.Printf("connect redis failed:" + ip)
-		return
-	}
+	//	redisConn, err := createConnectRedis()
+	//	if redisConn != nil { //连接失败时为nil，不能close
+	//		defer redisConn.Close()
+	//	}
+	//	if err != nil {
+	//		log.Printf("connect redis failed: %v", err)
+	//		log.Printf("connect redis failed:" + ip)
+	//		return
+	//	}
 
 	clientObj := sc.NewSpacecraftClient(conn)
 	cc := reflect.ValueOf(clientObj)
@@ -83,17 +98,22 @@ func index(w http.ResponseWriter, req *http.Request) {
 		if req.FormValue("apiName") == "ComplexCommand" {
 
 			ipSlice := strings.Split(req.FormValue("ip"), ":")
-			ip := "gbops:" + ipSlice[0]
-			command := req.FormValue("Command")
-			fmt.Println(ip)
-			fmt.Println(command)
-			fmt.Println(response)
-			//s, err := redisConn.Do("hset", ip, command, strings.TrimSuffix(response, "\n")) //response中有换行，会失败
-			s, err := redisConn.Do("hset", ip, command, response)
-			fmt.Println(s, err)
-
-			responseChan <- response
-			//serveWs(w, req)
+			//			ip := ipSlice[0]
+			//			command := req.FormValue("Command")
+			//			fmt.Println(ip)
+			//			fmt.Println(command)
+			result := jsonresult{
+				UniqueId: req.FormValue("uniqueId"),
+				Ip:       ipSlice[0],
+				Command:  req.FormValue("Command"),
+				Result:   response,
+			}
+			fmt.Println(result)
+			result_byte, err := json.Marshal(result)
+			if err != nil {
+				fmt.Println("json error:", err)
+			}
+			h.broadcast <- result_byte //websock 广播执行日志
 		}
 		w.Write([]byte(response))
 	} else {
@@ -109,10 +129,10 @@ func createConnect(ip string) (*grpc.ClientConn, sc.SpacecraftClient, error) {
 	return conn, c, err
 }
 
-func createConnectRedis() (redis.Conn, error) {
-	c, err := redis.Dial("tcp", "127.0.0.1:6379", redis.DialDatabase(0))
-	return c, err
-}
+//func createConnectRedis() (redis.Conn, error) {
+//	c, err := redis.Dial("tcp", "127.0.0.1:6379", redis.DialDatabase(0))
+//	return c, err
+//}
 
 //func createConnectWebsocket() (websocket.Conn, error) {
 //	conn, err := upgrader.Upgrade(w, r, nil)
@@ -225,41 +245,62 @@ func TypeConversion(value string, ntype string) (reflect.Value, error) {
 	return reflect.ValueOf(value), errors.New("未知的类型：" + ntype)
 }
 
-func serveWs(w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("upgrade:", err)
-		return
+func live(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+	liveChan := make(chan *liveresult, 1024)
+	for k, _ := range req.Form {
+		fmt.Println(req.FormValue(k))
+		go liveCheck(req.FormValue(k), liveChan)
 	}
-	defer conn.Close()
+
+	var results []*liveresult
+	timeOut := time.NewTimer(time.Second * 1)
 	for {
 		select {
-		case response := <-responseChan:
-			fmt.Println("ws将输出：", response)
-			if err = conn.WriteMessage(websocket.TextMessage, []byte(response)); err != nil {
-				fmt.Println("输出命令执行日志失败，websocket写数据错误", err)
-				return
-			} else {
-				fmt.Println("ws成功输出：", response)
+		case info := <-liveChan:
+			results = append(results, info)
+		case <-timeOut.C:
+			result_byte, err := json.Marshal(results)
+			if err != nil {
+				fmt.Println("json error:", err)
 			}
-			//		default:
-			//			//do nothing
-			//			messageType, p, err := conn.ReadMessage()
-			//			fmt.Println(messageType, p, err)
-			//			if err != nil {
-			//				return
-			//			}
+			w.WriteHeader(http.StatusOK)
+			w.Write(result_byte)
+			close(liveChan)
+			return
 		}
 	}
-	//	for {
-	//		messageType, p, err := conn.ReadMessage()
-	//		fmt.Println(messageType, p)
-	//		if err != nil {
-	//			return
-	//		}
-	//		if err = conn.WriteMessage(messageType, p); err != nil {
-	//			fmt.Println("输出命令执行日志失败，websocket写数据错误")
-	//			return
-	//		}
-	//	}
+
+}
+func liveCheck(machineInfo string, liveChan chan *liveresult) bool {
+	ipSlice := strings.Split(machineInfo, ":")
+	ip := ipSlice[0]
+	mid := ipSlice[1]
+	var result int = 0
+	status := &liveresult{
+		Ip:     ip,
+		Mid:    mid,
+		Result: result,
+	}
+
+	conn, c, err := createConnect(ip + ":50051")
+	if conn != nil { //连接失败时为nil，不能close
+		defer conn.Close()
+	}
+	if err != nil {
+		log.Printf("connect failed %s : %v", ip, err)
+		return false
+	}
+	param := &sc.Empty{}
+	r, err := c.Live(context.Background(), param)
+	if err != nil {
+		log.Printf("could not call live: %v", err)
+		return false
+	}
+	if string(r.String_) == "ok" {
+		status.Result = 1
+	}
+
+	liveChan <- status
+	return true
 }
