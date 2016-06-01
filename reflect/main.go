@@ -1,20 +1,22 @@
 package main
 
 import (
-	sc "../spacecraft"
 	"errors"
 	"fmt"
+
+	sc "../spacecraft"
 	//"github.com/garyburd/redigo/redis"
 	//	"github.com/gorilla/websocket"
 	"encoding/json"
-	"golang.org/x/net/context"
-	"google.golang.org/grpc"
 	"log"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
+
+	"golang.org/x/net/context"
+	"google.golang.org/grpc"
 )
 
 //var upgrader = websocket.Upgrader{
@@ -300,6 +302,13 @@ func liveCheck(machineInfo string, liveChan chan *liveresult) bool {
 	if string(r.String_) == "ok" {
 		status.Result = 1
 	}
+
+	//超时后，liveChan被关闭，在向这个通道中写数据会panic
+	defer func() {
+		if err := recover(); err != nil {
+			log.Println("liveCheck timeout, liveChan has been closed:", err)
+		}
+	}()
 
 	liveChan <- status
 	return true
