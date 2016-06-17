@@ -167,11 +167,11 @@ func ComplexCommand(command string, dir string) string {
 		cmd = exec.Command("/bin/bash", "-c", command)
 	}
 	cmd.Dir = dir
-	env := `PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/go/bin:/root/bin
-PWD=/root
-LANG=en_US.UTF-8`
-	//env := "/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/go/bin:/root/bin"
-	cmd.Env = strings.Split(env, "\r\n")
+	cmd.Env = []string{
+		"SHELL=/bin/bash",
+		"PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/go/bin:/root/bin",
+		"LC_ALL=en_US.UTF-8",
+	}
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	err := cmd.Run()
