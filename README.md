@@ -1,29 +1,61 @@
-# deploy
-todo：  
-整理grpc接口  
-执行脚本，支持自定义命令  
-grpc接口授权认证  
-svn更新集成  
+GRPC实现的服务器管理工具, 需与web页面配合使用, web端是内部项目, 还不能公开
 
-web端  
-用户模块  
-日志模块  
-    命令日志  
-    流程日志  
-服务器详细信息悬浮面板  
-权限划分  
-自定义菜单  
+主要功能：
+- 命令执行
+- 文件传输
+- 存活检测
 
+服务端口
+server: 50051
+proxy: 80,8000
 
-流程
-多个相同脚本，发送参数和回显问题
-需在添加流程时加入序列值，或只用foreach的K值
+部署:
+gbopsProxy web请求代理，只需部署一个
+gbopsServer 服务端，部署在需要管理的服务器上
 
-版本管理
-定制流程 -- 发布版本
-一个特定的流程
+API：
+#### 命令执行
+url: http://127.0.0.1/index
+参数：
+                    
+参数名  | 说明
+------------- | -------------
+apiName  | 默认值 ComplexCommand , 接口名
+Dir | 默认值 / , 执行路径
+Command |  执行的命令
+ip |  目标服务器ip:port
+uniqueId |  //随机字符串
+                    
 
-命令返回
-集中右上角总结 xx个成功，xx个失败
-点击失败去处理
-1
+命令执行后，除了直接返回结果，也会通过websocket返回，在管理页面可以方便的显示，适合长时命令
+
+#### 文件传输
+url: http://127.0.0.1/index
+参数：
+                    
+参数名  | 说明
+------------- | -------------
+apiName  | 默认值 SendFile ,接口名
+ip  |  目标服务器ip:port
+RelativePath  |  上传的相对路径，相对于/usr/local/gbops
+FileContent |  文件内容
+                     
+仅用于脚本类型，未测试二进制文件
+
+#### 存活检测
+url: http://127.0.0.1/live
+参数：
+无参数，若服务器存活则返回"ok"
+
+调用方式：
+```php
+$params = [
+	'apiName' => 'ComplexCommand',
+	'Dir' => '/',
+	'Command' => $command,
+	'ip' => $ip.':50051',
+	'uniqueId' => $uniqueId
+];
+$curl = new Curl();
+$body = $curl->post('http://127.0.0.1/index', $params);
+```
