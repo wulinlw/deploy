@@ -58,4 +58,4 @@ $params = [
 ];
 $curl = new Curl();
 $body = $curl->post('http://127.0.0.1/index', $params);
-```
+
