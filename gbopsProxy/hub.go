@@ -4,6 +4,13 @@
 
 package main
 
+//"fmt"
+
+type SecretMsg struct {
+	User string
+	Msg  []byte
+}
+
 // hub maintains the set of active connections and broadcasts messages to the
 // connections.
 type hub struct {
@@ -18,6 +25,8 @@ type hub struct {
 
 	// Unregister requests from connections.
 	unregister chan *connection
+
+	Msg chan *SecretMsg
 }
 
 var h = hub{
@@ -25,6 +34,7 @@ var h = hub{
 	register:    make(chan *connection),
 	unregister:  make(chan *connection),
 	connections: make(map[*connection]bool),
+	Msg:         make(chan *SecretMsg),
 }
 
 func (h *hub) run() {
@@ -45,6 +55,18 @@ func (h *hub) run() {
 					close(c.send)
 					delete(h.connections, c)
 				}
+			}
+		case msg := <-h.Msg:
+			for c := range h.connections {
+				if c.User == msg.User {
+					select {
+					case c.send <- msg.Msg:
+					default:
+						close(c.send)
+						delete(h.connections, c)
+					}
+				}
+
 			}
 		}
 	}

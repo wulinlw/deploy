@@ -4,6 +4,17 @@ import (
 	"log"
 	"net"
 
+	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/shirou/gopsutil/cpu"
+	"github.com/shirou/gopsutil/mem"
+
 	"../deploy/command"
 	"../deploy/upload"
 	sc "../spacecraft"
@@ -12,7 +23,8 @@ import (
 )
 
 const (
-	port = ":50051"
+	port        = ":50051"
+	SysInfoTime = 30
 )
 
 // server is used to implement spacecraft.BaseServer.
@@ -51,6 +63,7 @@ func (s *server) Live(ctx context.Context, in *sc.Empty) (*sc.ResponseStr, error
 }
 
 func main() {
+	go KeepHeartBeat()
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
@@ -58,4 +71,46 @@ func main() {
 	s := grpc.NewServer()
 	sc.RegisterSpacecraftServer(s, &server{})
 	s.Serve(lis)
+}
+
+func KeepHeartBeat() {
+	//初始化定时器
+	t := time.NewTicker(SysInfoTime * time.Second)
+	for {
+		select {
+		case <-t.C:
+			SysInfoUpload()
+		}
+	}
+}
+
+func SysInfoUpload() {
+	defer func() { //必须要先声明defer，否则不能捕获到panic异常
+		if err := recover(); err != nil {
+			fmt.Println("SysInfoUpload error", err) //这里的err其实就是panic传入的内容，"bug"
+		}
+	}()
+	memInfo, _ := mem.VirtualMemory()
+	cpuInfo, _ := cpu.Percent(time.Second*SysInfoTime, false)
+	// almost every return value is a struct
+	//fmt.Printf("Total: %v, Free:%v, UsedPercent:%f%%\n", memInfo.Total, memInfo.Free, memInfo.UsedPercent)
+	// convert to JSON. String() is also implemented
+	//fmt.Println(memInfo)
+	//fmt.Println(cpuInfo)
+
+	p := url.Values{}
+	p.Set("memTotal", strconv.Itoa(int(memInfo.Total/(1024*1024))))
+	p.Set("memFree", strconv.Itoa(int(memInfo.Free/(1024*1024))))
+	p.Set("memPercent", strconv.Itoa(int(memInfo.UsedPercent)))
+	p.Set("cpuPercent", strconv.Itoa(int(cpuInfo[0])))
+	body := ioutil.NopCloser(strings.NewReader(p.Encode())) //把form数据编下码
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", "http://gbops.gamebar.com/collect/sysinfo", body)
+
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value") //这个一定要加，不加form的值post不过去，被坑了两小时
+	//fmt.Println(p)
+	resp, _ := client.Do(req) //发送
+	defer resp.Body.Close()   //一定要关闭resp.Body
+	//data, _ := ioutil.ReadAll(resp.Body)
+	//fmt.Println(string(data))
 }

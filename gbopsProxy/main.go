@@ -49,12 +49,14 @@ func main() {
 
 func index(w http.ResponseWriter, req *http.Request) {
 	ip := req.FormValue("ip")
+	websocketRe := req.FormValue("websocket")
+	user := req.FormValue("user")
 	conn, _, err := createConnect(ip)
 	if conn != nil { //连接失败时为nil，不能close
 		defer conn.Close()
 	}
 	if err != nil {
-		log.Printf("connect failed: %v", err)
+		//log.Printf("connect failed: %v", err)
 		log.Printf("connect failed:" + ip)
 		return
 	}
@@ -80,8 +82,8 @@ func index(w http.ResponseWriter, req *http.Request) {
 	tt := cc.MethodByName(req.FormValue("apiName"))
 	paramsStruct := getStruct(req.FormValue("apiName"))
 	paramsStruct = fillStruct(paramsStruct, req)
-	fmt.Printf("\n======\n%s\n", req.FormValue("apiName"))
-	fmt.Printf("%#v", paramsStruct)
+	//fmt.Printf("\n======\n%s\n", req.FormValue("apiName"))
+	fmt.Printf("proxy>>>%s %#v\n", ip, paramsStruct)
 	params := []interface{}{context.Background(), paramsStruct}
 	if tt.IsValid() {
 		args := make([]reflect.Value, len(params))
@@ -115,7 +117,14 @@ func index(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				fmt.Println("json error:", err)
 			}
-			h.broadcast <- result_byte //websock 广播执行日志
+			if websocketRe == "1" {
+				//h.broadcast <- result_byte //websock 广播执行日志
+				msg := &SecretMsg{User: user, Msg: result_byte}
+				//fmt.Println("pre send:", msg)
+				h.Msg <- msg
+				//fmt.Printf("msg! h.userconn:%#v\n", h.UserConn)
+			}
+
 		}
 		w.Write([]byte(response))
 	} else {
@@ -166,7 +175,7 @@ func fillStruct(s interface{}, req *http.Request) interface{} {
 		fieldName := reflect.TypeOf(s).Elem().Field(i).Name
 		fieldValue := reflect.ValueOf(s).Elem().FieldByName(fieldName)
 		valueType := fieldValue.Type().Kind().String()
-		fmt.Println(fieldName, fieldValue, fieldValue.Type().Kind())
+		//fmt.Println(fieldName, fieldValue, fieldValue.Type().Kind())
 		//		fmt.Println(reflect.ValueOf(s).FieldByName(fieldName))
 		if !fieldValue.CanSet() {
 			log.Println("不可设置值，struct对象field不可设置")
@@ -181,7 +190,7 @@ func fillStruct(s interface{}, req *http.Request) interface{} {
 			fieldValue.Set(fieldValue2)
 		}
 	}
-	fmt.Sprintf("%#v", s)
+	//fmt.Sprintf("%#v", s)
 	return s
 }
 
@@ -251,7 +260,7 @@ func live(w http.ResponseWriter, req *http.Request) {
 	req.ParseForm()
 	liveChan := make(chan *liveresult, 1024)
 	for k, _ := range req.Form {
-		fmt.Println(req.FormValue(k))
+		//fmt.Println(req.FormValue(k))
 		go liveCheck(req.FormValue(k), liveChan)
 	}
 
@@ -290,7 +299,7 @@ func liveCheck(machineInfo string, liveChan chan *liveresult) bool {
 		defer conn.Close()
 	}
 	if err != nil {
-		log.Printf("connect failed %s : %v", ip, err)
+		//log.Printf("connect failed %s : %v", ip, err)
 		return false
 	}
 	param := &sc.Empty{}

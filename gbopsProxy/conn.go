@@ -5,10 +5,12 @@
 package main
 
 import (
-	"github.com/gorilla/websocket"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
+
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -16,7 +18,7 @@ const (
 	writeWait = 10 * time.Second
 
 	// Time allowed to read the next pong message from the peer.
-	pongWait = 60 * time.Second
+	pongWait = 30 * time.Second
 
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
@@ -38,6 +40,8 @@ type connection struct {
 
 	// Buffered channel of outbound messages.
 	send chan []byte
+
+	User string
 }
 
 // readPump pumps messages from the websocket connection to the hub.
@@ -57,7 +61,8 @@ func (c *connection) readPump() {
 			}
 			break
 		}
-		h.broadcast <- message
+		c.User = string(message) //这里的读只用作身份注册，因为这个websocket只做单向通知用途
+		//h.broadcast <- message
 	}
 }
 
@@ -85,7 +90,9 @@ func (c *connection) writePump() {
 				return
 			}
 		case <-ticker.C:
+			//fmt.Println("PingMessage start")
 			if err := c.write(websocket.PingMessage, []byte{}); err != nil {
+				//fmt.Println("PingMessage err:", err)
 				return
 			}
 		case message := <-responseChan:
@@ -104,7 +111,6 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	}
 	c := &connection{send: make(chan []byte, 2048), ws: ws}
 	h.register <- c
-	c.writePump()
-	//go c.writePump()
-	//c.readPump()
+	go c.writePump()
+	c.readPump()
 }
