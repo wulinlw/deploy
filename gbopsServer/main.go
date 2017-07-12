@@ -1,13 +1,14 @@
 package main
 
 import (
-	"log"
-	"net"
-
+	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
+	"net"
 	"net/http"
 	"net/url"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -79,7 +80,8 @@ func KeepHeartBeat() {
 	for {
 		select {
 		case <-t.C:
-			SysInfoUpload()
+			go SysInfoUpload()
+			go gjolProcessUpload()
 		}
 	}
 }
@@ -107,10 +109,43 @@ func SysInfoUpload() {
 	client := &http.Client{}
 	req, _ := http.NewRequest("POST", "http://gbops.gamebar.com/collect/sysinfo", body)
 
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value") //这个一定要加，不加form的值post不过去，被坑了两小时
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value") //这个一定要加，不加form的值post不过去
 	//fmt.Println(p)
 	resp, _ := client.Do(req) //发送
 	defer resp.Body.Close()   //一定要关闭resp.Body
 	//data, _ := ioutil.ReadAll(resp.Body)
 	//fmt.Println(string(data))
+}
+
+func gjolProcessUpload() {
+	defer func() { //必须要先声明defer，否则不能捕获到panic异常
+		if err := recover(); err != nil {
+			fmt.Println("SysInfoUpload error", err) //这里的err其实就是panic传入的内容，"bug"
+		}
+	}()
+
+	dir := "/root/"
+	commandStr := "ps -ef|grep \"server-name\"|grep -v \"grep\"|wc -l"
+	var cmd *exec.Cmd
+	cmd = exec.Command("/bin/bash", "-c", commandStr)
+	cmd.Dir = dir
+	cmd.Env = []string{
+		"SHELL=/bin/bash",
+		"PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/go/bin:/root/bin",
+		"LC_ALL=en_US.UTF-8",
+	}
+	var out bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Run()
+	gjolProcess := out.String()
+	//fmt.Println(gjolProcess)
+	p := url.Values{}
+	p.Set("procNum", gjolProcess)
+	body := ioutil.NopCloser(strings.NewReader(p.Encode())) //把form数据编下码
+	client := &http.Client{}
+	req, _ := http.NewRequest("POST", "http://gbops.gamebar.com/collect/gjolprocess", body)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded; param=value")
+	resp, _ := client.Do(req) //发送
+	defer resp.Body.Close()   //一定要关闭resp.Body
+
 }

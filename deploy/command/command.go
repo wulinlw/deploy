@@ -2,6 +2,7 @@ package command
 
 import (
 	"bytes"
+	"fmt"
 	//"fmt"
 	"log"
 	"os/exec"
@@ -166,6 +167,7 @@ func ComplexCommand(command string, dir string) string {
 	} else {
 		cmd = exec.Command("/bin/bash", "-c", command)
 	}
+	fmt.Println(command)
 	cmd.Dir = dir
 	cmd.Env = []string{
 		"SHELL=/bin/bash",
